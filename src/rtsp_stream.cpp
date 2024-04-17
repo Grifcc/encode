@@ -120,7 +120,7 @@ RtspStream::RtspStream(const std::string media_server,
         }
     }
 
-    swsContext_ = sws_getContext(width_, height_, AV_PIX_FMT_BGR24,
+    swsContext_ = sws_getContext(width_, height_, AV_PIX_FMT_GRAY8,
                                  width_, height_, fmt_,
                                  0, nullptr, nullptr, nullptr);
 
