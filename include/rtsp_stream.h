@@ -45,12 +45,23 @@ static uint8_t UUID[16] = {0xdc, 0x45, 0xe9, 0xbd, 0xe6,
                            0xd9, 0x48, 0xb7, 0x96, 0x2c, 0xd8, 0x20, 0xd9, 0x23, 0xee, 0xef};
 
 // Avoid coupling with OpenCV
-struct cvMat
+class cvMat
 {
+public:
+    cvMat(int height, int width, int channel) : height(height), width(width), step(step), data(new uint8_t[height * width * channel]) {}
+    cvMat(int height, int width, int channel, uint8_t *data) : height(height), width(width), step(step), data(data) {}
+    cvMat(const cv::Mat &mat) : height(mat.rows), width(mat.cols), step(mat.step), channel(mat.channels()), data(new uint8_t[height * width * channel])
+    {
+
+        // "cv::Mat: mat is not continuous,NOT SUPPORTED!"
+        memcpy(data, mat.data, height * width * channel);
+    }
     int width;
     int height;
     int step;
+    int channel;
     uint8_t *data;
+    ~cvMat() { delete[] data; }
 };
 
 struct Labels
@@ -68,11 +79,6 @@ struct Target
     cvMat frame;
     std::vector<Labels> labels;
 };
-
-cvMat Mat2Mat(const cv::Mat &mat)
-{
-    return cvMat{mat.cols, mat.rows, mat.step, mat.data};
-}
 
 class RtspStream
 {
