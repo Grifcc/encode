@@ -193,7 +193,9 @@ RtspStream::~RtspStream()
     }
 
     avcodec_close(desCodecContext_);
+    avcodec_free_context(&desCodecContext_);
     avformat_close_input(&desFmtContext_);
+    avformat_free_context(desFmtContext_);
 }
 
 void RtspStream::stop()
@@ -201,7 +203,7 @@ void RtspStream::stop()
     stopped_.store(true);
 }
 
-void RtspStream::addTarget2Sei(AVPacket *packet, const std::vector<Labels> &labels)
+void RtspStream::addTarget2Sei(AVPacket *packet, const std::vector<Label> &labels)
 {
     if (packet->stream_index != AVMEDIA_TYPE_VIDEO)
         return;

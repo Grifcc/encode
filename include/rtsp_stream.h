@@ -64,7 +64,7 @@ public:
     ~cvMat() { delete[] data; }
 };
 
-struct Labels
+struct Label
 {
     uint8_t label;
     uint16_t x;
@@ -77,7 +77,7 @@ struct Labels
 struct Target
 {
     cvMat frame;
-    std::vector<Labels> labels;
+    std::vector<Label> labels;
 };
 
 class RtspStream
@@ -108,7 +108,7 @@ public:
 
 private:
     bool mat2frame(const cvMat &, AVFrame *);
-    void addTarget2Sei(AVPacket *packet, const std::vector<Labels> &labels);
+    void addTarget2Sei(AVPacket *packet, const std::vector<Label> &labels);
 
     const AVPixelFormat fmt_ = AV_PIX_FMT_YUV420P;
 
