@@ -262,15 +262,15 @@ void RtspStream::set_media_server(const std::string &address)
     rtsp_url_ = "rtsp://" + address + "/" + std::to_string(grab_id_);
 }
 
-bool RtspStream::mat2frame(const cvMat &inMat, AVFrame *frame)
+bool RtspStream::mat2frame(const cv::Mat &inMat, AVFrame *frame)
 {
 
-    frame->width = inMat.width;
-    frame->height = inMat.height;
+    frame->width = inMat.cols;
+    frame->height = inMat.rows;
 
-    int buffer_size = av_image_get_buffer_size(fmt_, inMat.width, inMat.height, 1);
+    int buffer_size = av_image_get_buffer_size(fmt_, frame->width, frame->height, 1);
     uint8_t *buffer = (uint8_t *)av_malloc(buffer_size);
-    av_image_fill_arrays(frame->data, frame->linesize, buffer, fmt_, inMat.width, inMat.height, 1);
+    av_image_fill_arrays(frame->data, frame->linesize, buffer, fmt_, frame->width, frame->height, 1);
     uint8_t *srcData[1] = {inMat.data};
     int srcStride[1] = {inMat.step};
     sws_scale(swsContext_, srcData, srcStride, 0, height_, frame->data, frame->linesize);

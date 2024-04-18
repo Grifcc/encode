@@ -44,27 +44,6 @@ static uint8_t PAYLOADCode[1] = {0x05};
 static uint8_t UUID[16] = {0xdc, 0x45, 0xe9, 0xbd, 0xe6,
                            0xd9, 0x48, 0xb7, 0x96, 0x2c, 0xd8, 0x20, 0xd9, 0x23, 0xee, 0xef};
 
-// Avoid coupling with OpenCV
-class cvMat
-{
-public:
-    cvMat() {}
-    cvMat(int height, int width, int channel) : height(height), width(width), step(step), data(new uint8_t[height * width * channel]) {}
-    cvMat(int height, int width, int channel, uint8_t *data) : height(height), width(width), step(step), data(data) {}
-    cvMat(const cv::Mat &mat) : height(mat.rows), width(mat.cols), step(mat.step), channel(mat.channels()), data(new uint8_t[height * width * channel])
-    {
-
-        // "cv::Mat: mat is not continuous,NOT SUPPORTED!"
-        memcpy(data, mat.data, height * width * channel);
-    }
-    int width;
-    int height;
-    int step;
-    int channel;
-    uint8_t *data;
-    ~cvMat() { delete[] data; }
-};
-
 struct Label
 {
     uint8_t label;
@@ -77,7 +56,7 @@ struct Label
 
 struct Target
 {
-    cvMat frame;
+    cv::Mat frame;
     std::vector<Label> labels;
 };
 
@@ -108,7 +87,7 @@ public:
     bool isStopped();
 
 private:
-    bool mat2frame(const cvMat &, AVFrame *);
+    bool mat2frame(const cv::Mat &, AVFrame *);
     void addTarget2Sei(AVPacket *packet, const std::vector<Label> &labels);
 
     const AVPixelFormat fmt_ = AV_PIX_FMT_YUV420P;
