@@ -46,7 +46,7 @@ static uint8_t UUID[16] = {0xdc, 0x45, 0xe9, 0xbd, 0xe6,
 
 struct Label
 {
-    uint8_t label;
+    uint16_t label;
     uint16_t x;
     uint16_t y;
     uint16_t w;
