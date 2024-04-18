@@ -260,7 +260,7 @@ void RtspStream::set_media_server(const std::string &address)
     rtsp_url_ = "rtsp://" + address + "/" + std::to_string(grab_id_);
 }
 
-bool RtspStream::mat2frame(const cv::Mat &inMat, AVFrame *frame)
+void RtspStream::mat2frame(const cv::Mat &inMat, AVFrame *frame)
 {
 
     frame->width = inMat.cols;

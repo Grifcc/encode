@@ -87,7 +87,7 @@ public:
     bool isStopped();
 
 private:
-    bool mat2frame(const cv::Mat &, AVFrame *);
+    void mat2frame(const cv::Mat &, AVFrame *);
     void addTarget2Sei(AVPacket *packet, const std::vector<Label> &labels);
 
     const AVPixelFormat fmt_ = AV_PIX_FMT_YUV420P;
