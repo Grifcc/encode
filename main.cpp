@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
     push_thread->detach();
 
     MLOG_INFO("Start Read Img");
-    int i = 0;
+    uint16_t i = 0;
     while (true)
     {
         cv::Mat frame;
@@ -86,12 +86,19 @@ int main(int argc, char *argv[])
         }
         MLOG_INFO("Read frame %d", i);
         cv::cvtColor(frame, frame, cv::COLOR_BGR2GRAY);
-        media->push_target(new Target{frame, {{0, 1, 2, 3, 4, 5}, {1, 1, 2, 3, 4, 5}}});
+        media->push_target(new Target{frame, {{i, 1, 2, 3, 4, 5}, 
+                                              {i, 1, 2, 3, 4, 5},
+                                              {i, 1, 2, 3, 4, 5},
+                                              {i, 1, 2, 3, 4, 5},
+                                              {i, 1, 2, 3, 4, 5},
+                                              {i, 1, 2, 3, 4, 5},
+                                              {i, 1, 2, 3, 4, 5},
+                                              {i, 1, 2, 3, 4, 5}}});
         i++;
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     cap.release();
-    media->stop();
+    // media->stop();
     delete media;
     // delete push_thread;
     return 0;
