@@ -148,7 +148,7 @@ void RtspStream::start()
 
         desFrame->format = fmt_;
         auto target = data_queue_.wait_and_pop();
-        mat2frame(target.frame, desFrame);
+        mat2frame(target->frame, desFrame);
         desFrame->pts = pts_;
         ++pts_;
 
@@ -169,12 +169,13 @@ void RtspStream::start()
         desPkt->dts = av_rescale_q_rnd(desPkt->dts, desCodecContext_->time_base, desStream_->time_base, (AVRounding)(AV_ROUND_NEAR_INF | AV_ROUND_NEAR_INF));
         desPkt->duration = av_rescale_q(desPkt->duration, desCodecContext_->time_base, desStream_->time_base);
 
-        addTarget2Sei(desPkt, target.labels);
+        addTarget2Sei(desPkt, target->labels);
         if ((code = av_interleaved_write_frame(desFmtContext_, desPkt)) < 0)
         {
             avError("av_write_frame err", code);
             continue;
         }
+        delete target;
         av_packet_unref(desPkt);
         av_frame_unref(desFrame);
     }
@@ -246,7 +247,7 @@ void RtspStream::addTarget2Sei(AVPacket *packet, const std::vector<Label> &label
     memcpy(pd + 1, ori_data, ori_size);
 }
 
-void RtspStream::push_target(const Target &target)
+void RtspStream::push_target(Target *target)
 {
     data_queue_.push(target);
 }
@@ -270,7 +271,5 @@ bool RtspStream::mat2frame(const cvMat &inMat, AVFrame *frame)
     int buffer_size = av_image_get_buffer_size(fmt_, inMat.width, inMat.height, 1);
     uint8_t *buffer = (uint8_t *)av_malloc(buffer_size);
     av_image_fill_arrays(frame->data, frame->linesize, buffer, fmt_, inMat.width, inMat.height, 1);
-    uint8_t *srcData[1] = {inMat.data};
-    int srcStride[1] = {inMat.step};
-    sws_scale(swsContext_, srcData, srcStride, 0, height_, frame->data, frame->linesize);
+    memcpy(frame->data[0], inMat.data, inMat.width * inMat.height);
 }

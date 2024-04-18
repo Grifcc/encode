@@ -48,6 +48,7 @@ static uint8_t UUID[16] = {0xdc, 0x45, 0xe9, 0xbd, 0xe6,
 class cvMat
 {
 public:
+    cvMat() {}
     cvMat(int height, int width, int channel) : height(height), width(width), step(step), data(new uint8_t[height * width * channel]) {}
     cvMat(int height, int width, int channel, uint8_t *data) : height(height), width(width), step(step), data(data) {}
     cvMat(const cv::Mat &mat) : height(mat.rows), width(mat.cols), step(mat.step), channel(mat.channels()), data(new uint8_t[height * width * channel])
@@ -99,7 +100,7 @@ public:
     bool connect();
 
     void stop();
-    void push_target(const Target &target);
+    void push_target(Target *target);
     void set_media_server(const std::string &address);
 
     int get_frame_rate() const { return frame_rate_; }
@@ -123,7 +124,7 @@ private:
     uint8_t Header_[22];
     std::string rtsp_url_;
 
-    threadsafe_queue<Target> data_queue_;
+    threadsafe_queue<Target *> data_queue_;
     int64_t pts_ = 0;
     int64_t dts_ = 0;
     std::atomic<bool> stopped_;
