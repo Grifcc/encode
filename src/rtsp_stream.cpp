@@ -271,5 +271,7 @@ bool RtspStream::mat2frame(const cvMat &inMat, AVFrame *frame)
     int buffer_size = av_image_get_buffer_size(fmt_, inMat.width, inMat.height, 1);
     uint8_t *buffer = (uint8_t *)av_malloc(buffer_size);
     av_image_fill_arrays(frame->data, frame->linesize, buffer, fmt_, inMat.width, inMat.height, 1);
-    memcpy(frame->data[0], inMat.data, inMat.width * inMat.height);
+    uint8_t *srcData[1] = {inMat.data};
+    int srcStride[1] = {inMat.step};
+    sws_scale(swsContext_, srcData, srcStride, 0, height_, frame->data, frame->linesize);
 }
