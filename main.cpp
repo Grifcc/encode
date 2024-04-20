@@ -51,55 +51,59 @@ int main(int argc, char *argv[])
     std::string rtsp_address = argv[3];
     std::string port = argv[4];
 
-    cv::VideoCapture cap(input_video, cv::CAP_FFMPEG);
-
-    if (!cap.isOpened())
-    {
-        std::cerr << "Error: Failed to open video file." << std::endl;
-        return -1;
-    }
-
     auto media = new RtspStream(rtsp_address + ":" + port, codec, 8, 5, 500000, 512, 512, 0);
 
-    while (!media->connect())
+    for (size_t j = 0; j < 2; j++)
     {
         /* code */
-        sleep(2);
-    }
-    MLOG_INFO("Connect success");
-
-    // 启动推流线程
-    MLOG_INFO("Start push thread");
-    auto push_thread = new std::thread(&RtspStream::start, media);
-    push_thread->detach();
-
-    MLOG_INFO("Start Read Img");
-    uint16_t i = 0;
-    while (true)
-    {
-        cv::Mat frame;
-        MLOG_INFO("Read frame %d", i);
-        if (!cap.read(frame))
+        MLOG_INFO("Connect to server");
+        while (!media->isReady())
         {
-            MLOG_INFO("Read finished");
-            break;
+            /* code */
+             sleep(1);
         }
-        MLOG_INFO("Read frame %d", i);
-        cv::cvtColor(frame, frame, cv::COLOR_BGR2GRAY);
-        media->push_target(new Target{frame, {{i, 1, 2, 3, 4, 5}, 
-                                              {i, 1, 2, 3, 4, 5},
-                                              {i, 1, 2, 3, 4, 5},
-                                              {i, 1, 2, 3, 4, 5},
-                                              {i, 1, 2, 3, 4, 5},
-                                              {i, 1, 2, 3, 4, 5},
-                                              {i, 1, 2, 3, 4, 5},
-                                              {i, 1, 2, 3, 4, 5}}});
-        i++;
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        
+        while (!media->connect())
+        {
+            /* code */
+            sleep(2);
+        }
+        MLOG_INFO("Connect success");
+
+        cv::VideoCapture cap(input_video, cv::CAP_FFMPEG);
+        if (!cap.isOpened())
+        {
+            std::cerr << "Error: Failed to open video file." << std::endl;
+            return -1;
+        }
+
+        // 启动推流线程
+        MLOG_INFO("Start push thread");
+        auto push_thread = new std::thread(&RtspStream::start, media);
+        push_thread->detach();
+
+        MLOG_INFO("Start Read Img");
+        uint16_t i = 0;
+        while (true)
+        {
+            cv::Mat frame;
+            MLOG_INFO("Read frame %d", i);
+            if (!cap.read(frame))
+            {
+                MLOG_INFO("Read finished");
+                break;
+            }
+            cv::cvtColor(frame, frame, cv::COLOR_BGR2GRAY);
+            media->push_target(new Target{frame, {{i, 1, 2, 3, 4, 5}, {i, 1, 2, 3, 4, 5}, {i, 1, 2, 3, 4, 5}, {i, 1, 2, 3, 4, 5}, {i, 1, 2, 3, 4, 5}, {i, 1, 2, 3, 4, 5}, {i, 1, 2, 3, 4, 5}, {i, 1, 2, 3, 4, 5}}});
+            i++;
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+        MLOG_INFO("Stop push thread");
+        cap.release();
+        media->stop();
+        delete push_thread;
     }
-    cap.release();
-    media->stop();
+
     delete media;
-    delete push_thread;
     return 0;
 }

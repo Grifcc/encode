@@ -47,7 +47,8 @@ RtspStream::RtspStream(const std::string media_server,
                                               width_(width),
                                               height_(height),
                                               grab_id_(grabId),
-                                              stopped_(false)
+                                              stopped_(false),
+                                              ready_(false)
 {
 
     MLOG_DEBUG("rtsp_url:%s", rtsp_url_.c_str());
@@ -61,12 +62,12 @@ RtspStream::RtspStream(const std::string media_server,
     avdevice_register_all();
     avformat_network_init();
     int code = 0;
-    const AVCodec *desCodec = avcodec_find_encoder_by_name(des_codec_.c_str());
-    if (!desCodec)
+    desCodec_ = avcodec_find_encoder_by_name(des_codec_.c_str());
+    if (!desCodec_)
     {
         MLOG_ERROR("avcodec_find_encoder_by_name, can't file codec:%s", des_codec_.c_str());
     }
-    desCodecContext_ = avcodec_alloc_context3(desCodec);
+    desCodecContext_ = avcodec_alloc_context3(desCodec_);
     if (!desCodecContext_)
     {
         MLOG_ERROR("avcodec_alloc_context3 err");
@@ -88,11 +89,21 @@ RtspStream::RtspStream(const std::string media_server,
     desCodecContext_->qcompress = 1.0;
 
     av_opt_set_int(desCodecContext_->priv_data, "udu_sei", 1, AV_DICT_MATCH_CASE); // enable udu sei
-    if ((code = avcodec_open2(desCodecContext_, desCodec, nullptr)) < 0)
+    if ((code = avcodec_open2(desCodecContext_, desCodec_, nullptr)) < 0)
     {
         avError("open desCodecContext err", code);
     }
 
+    swsContext_ = sws_getContext(width_, height_, AV_PIX_FMT_GRAY8,
+                                 width_, height_, fmt_,
+                                 0, nullptr, nullptr, nullptr);
+    ready_.store(true);
+    MLOG_DEBUG("RtspStream init success");
+}
+
+bool RtspStream::connect()
+{
+    int code = 0;
     // rtsp
     if (avformat_alloc_output_context2(&desFmtContext_, nullptr, "rtsp", rtsp_url_.c_str()) < 0)
     {
@@ -101,7 +112,7 @@ RtspStream::RtspStream(const std::string media_server,
     av_dump_format(desFmtContext_, 1, desFmtContext_->url, 1);
     desFmtContext_->max_interleave_delta = max_interleave_delta_;
     av_opt_set(desFmtContext_->priv_data, "rtsp_transport", "tcp", 0);
-    desStream_ = avformat_new_stream(desFmtContext_, desCodec);
+    desStream_ = avformat_new_stream(desFmtContext_, desCodec_);
     if (!desStream_)
     {
         MLOG_ERROR("avformat_new_stream err");
@@ -119,23 +130,13 @@ RtspStream::RtspStream(const std::string media_server,
             MLOG_ERROR("error: avio_open('%s')", desFmtContext_->url);
         }
     }
-
-    swsContext_ = sws_getContext(width_, height_, AV_PIX_FMT_GRAY8,
-                                 width_, height_, fmt_,
-                                 0, nullptr, nullptr, nullptr);
-
-    MLOG_DEBUG("RtspStream init success");
-}
-
-bool RtspStream::connect()
-{
-    int code = 0;
     if ((code = avformat_write_header(desFmtContext_, nullptr)))
     {
         /* code */
         avError("avformat_write_header err", code);
         return false;
     }
+    ready_.store(false);
     return true;
 }
 /*视频的采集与转码处理*/
@@ -145,9 +146,13 @@ void RtspStream::start()
     AVFrame *desFrame = av_frame_alloc();
     while (!stopped_.load())
     {
-
         desFrame->format = fmt_;
         auto target = data_queue_.wait_and_pop();
+        if (target == nullptr)
+        {
+            /* code */
+            break;
+        }
         mat2frame(target->frame, desFrame);
         desFrame->pts = pts_;
         ++pts_;
@@ -179,10 +184,14 @@ void RtspStream::start()
         av_packet_unref(desPkt);
         av_frame_unref(desFrame);
     }
+    std::cout << "RtspStream stop" << std::endl;
     av_frame_free(&desFrame);
     av_packet_free(&desPkt);
     av_write_trailer(desFmtContext_);
-    sws_freeContext(swsContext_);
+    avformat_close_input(&desFmtContext_);
+    avformat_free_context(desFmtContext_);
+    desFmtContext_ = nullptr;
+    ready_.store(true);
 }
 
 RtspStream::~RtspStream()
@@ -192,16 +201,15 @@ RtspStream::~RtspStream()
         /* code */
         stop();
     }
-
     avcodec_close(desCodecContext_);
     avcodec_free_context(&desCodecContext_);
-    avformat_close_input(&desFmtContext_);
-    avformat_free_context(desFmtContext_);
+    sws_freeContext(swsContext_);
 }
 
 void RtspStream::stop()
 {
     stopped_.store(true);
+    data_queue_.push(nullptr);
 }
 
 void RtspStream::addTarget2Sei(AVPacket *packet, const std::vector<Label> &labels)
@@ -228,18 +236,18 @@ void RtspStream::addTarget2Sei(AVPacket *packet, const std::vector<Label> &label
 
     for (auto &label : labels)
     {
-        *pd++ = static_cast<char>(label.label >> 8 & 0xff);  // label
-        *pd++ = static_cast<char>(label.label & 0xff);       // label
-        *pd++ = static_cast<char>(label.x >> 8 & 0xff);  // x
-        *pd++ = static_cast<char>(label.x & 0xff);       // x
-        *pd++ = static_cast<char>(label.y >> 8 & 0xff);  // y
-        *pd++ = static_cast<char>(label.y & 0xff);       // y
-        *pd++ = static_cast<char>(label.w >> 8 & 0xff);  // w
-        *pd++ = static_cast<char>(label.w & 0xff);       // w
-        *pd++ = static_cast<char>(label.h >> 8 & 0xff);  // h
-        *pd++ = static_cast<char>(label.h & 0xff);       // h
-        *pd++ = static_cast<char>(label.id >> 8 & 0xff); // id
-        *pd++ = static_cast<char>(label.id & 0xff);      // id
+        *pd++ = static_cast<char>(label.label >> 8 & 0xff); // label
+        *pd++ = static_cast<char>(label.label & 0xff);      // label
+        *pd++ = static_cast<char>(label.x >> 8 & 0xff);     // x
+        *pd++ = static_cast<char>(label.x & 0xff);          // x
+        *pd++ = static_cast<char>(label.y >> 8 & 0xff);     // y
+        *pd++ = static_cast<char>(label.y & 0xff);          // y
+        *pd++ = static_cast<char>(label.w >> 8 & 0xff);     // w
+        *pd++ = static_cast<char>(label.w & 0xff);          // w
+        *pd++ = static_cast<char>(label.h >> 8 & 0xff);     // h
+        *pd++ = static_cast<char>(label.h & 0xff);          // h
+        *pd++ = static_cast<char>(label.id >> 8 & 0xff);    // id
+        *pd++ = static_cast<char>(label.id & 0xff);         // id
     }
     *pd++ = 0x80;
     memcpy(pd, ori_data, ori_size);
@@ -253,6 +261,11 @@ void RtspStream::push_target(Target *target)
 bool RtspStream::isStopped()
 {
     return stopped_.load();
+}
+
+bool RtspStream::isReady()
+{
+    return ready_.load();
 }
 
 void RtspStream::set_media_server(const std::string &address)

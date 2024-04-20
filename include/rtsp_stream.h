@@ -85,6 +85,7 @@ public:
     int get_frame_rate() const { return frame_rate_; }
     int get_grab_id() const { return grab_id_; }
     bool isStopped();
+    bool isReady();
 
 private:
     void mat2frame(const cv::Mat &, AVFrame *);
@@ -107,10 +108,12 @@ private:
     int64_t pts_ = 0;
     int64_t dts_ = 0;
     std::atomic<bool> stopped_;
+    std::atomic<bool> ready_;
 
     AVFormatContext *desFmtContext_ = nullptr;
     AVCodecContext *desCodecContext_ = nullptr;
     AVStream *desStream_ = nullptr;
     SwsContext *swsContext_ = nullptr;
+    AVCodec *desCodec_ = nullptr;
     const int64_t max_interleave_delta_ = 100000;
 };
