@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
     std::string rtsp_address = argv[3];
     std::string port = argv[4];
 
-    auto media = new RtspStream(rtsp_address + ":" + port, codec, 8, 5, 500000, 512, 512, 0);
+    auto media = new RtspStream(rtsp_address + ":" + port, codec,10, 5, 500000, 512, 512, 0);
 
     for (size_t j = 0; j < 2; j++)
     {
@@ -94,7 +94,7 @@ int main(int argc, char *argv[])
                 break;
             }
             cv::cvtColor(frame, frame, cv::COLOR_BGR2GRAY);
-            media->push_target(new Target{frame, {{i, 1, 2, 3, 4, 5}, {i, 1, 2, 3, 4, 5}, {i, 1, 2, 3, 4, 5}, {i, 1, 2, 3, 4, 5}, {i, 1, 2, 3, 4, 5}, {i, 1, 2, 3, 4, 5}, {i, 1, 2, 3, 4, 5}, {i, 1, 2, 3, 4, 5}}});
+            media->push_target(new Target{frame, {{i, 1, 2, 3, 4, 5}}});
             i++;
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }

@@ -220,7 +220,7 @@ void RtspStream::addTarget2Sei(AVPacket *packet, const std::vector<Label> &label
     auto ori_size = packet->size;
     char *ori_data = (char *)malloc(packet->size);
     memcpy(ori_data, packet->data, packet->size);
-    size_t len = labels.size() * 12;
+    size_t len = labels.size() * 18;
 
     uint32_t naluSize = seiNaluSize(len);
 
@@ -234,18 +234,24 @@ void RtspStream::addTarget2Sei(AVPacket *packet, const std::vector<Label> &label
     *pd++ = static_cast<char>(len >> 8 & 0xff); // NALU
     *pd++ = static_cast<char>(len & 0xff);      // NALU
 
-    for (auto &label : labels)
+    for (auto label : labels)
     {
+        *pd++ = 0xf5;                                       // 隔离字节
         *pd++ = static_cast<char>(label.label >> 8 & 0xff); // label
         *pd++ = static_cast<char>(label.label & 0xff);      // label
+        *pd++ = 0xf5;                                       // 隔离字节
         *pd++ = static_cast<char>(label.x >> 8 & 0xff);     // x
         *pd++ = static_cast<char>(label.x & 0xff);          // x
+        *pd++ = 0xf5;                                       // 隔离字节
         *pd++ = static_cast<char>(label.y >> 8 & 0xff);     // y
         *pd++ = static_cast<char>(label.y & 0xff);          // y
+        *pd++ = 0xf5;                                       // 隔离字节
         *pd++ = static_cast<char>(label.w >> 8 & 0xff);     // w
         *pd++ = static_cast<char>(label.w & 0xff);          // w
+        *pd++ = 0xf5;                                       // 隔离字节
         *pd++ = static_cast<char>(label.h >> 8 & 0xff);     // h
         *pd++ = static_cast<char>(label.h & 0xff);          // h
+        *pd++ = 0xf5;                                       // 隔离字节
         *pd++ = static_cast<char>(label.id >> 8 & 0xff);    // id
         *pd++ = static_cast<char>(label.id & 0xff);         // id
     }
