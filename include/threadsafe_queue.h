@@ -77,5 +77,9 @@ class threadsafe_queue {
     std::lock_guard<std::mutex> lk(mut);
     return data_queue.size();
   }
+  void clear() {
+    std::lock_guard<std::mutex> lk(mut);
+    data_queue.pop();
+  }
   ~threadsafe_queue() {}
 };
