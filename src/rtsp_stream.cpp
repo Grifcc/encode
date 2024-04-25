@@ -237,6 +237,9 @@ void RtspStream::addTarget2Sei(AVPacket *packet, const std::vector<Label> &label
     for (auto label : labels)
     {
         *pd++ = 0xf5;                                       // 隔离字节
+        *pd++ = static_cast<char>(label.id >> 8 & 0xff);    // id
+        *pd++ = static_cast<char>(label.id & 0xff);         // id
+        *pd++ = 0xf5;                                       // 隔离字节
         *pd++ = static_cast<char>(label.label >> 8 & 0xff); // label
         *pd++ = static_cast<char>(label.label & 0xff);      // label
         *pd++ = 0xf5;                                       // 隔离字节
@@ -251,9 +254,6 @@ void RtspStream::addTarget2Sei(AVPacket *packet, const std::vector<Label> &label
         *pd++ = 0xf5;                                       // 隔离字节
         *pd++ = static_cast<char>(label.h >> 8 & 0xff);     // h
         *pd++ = static_cast<char>(label.h & 0xff);          // h
-        *pd++ = 0xf5;                                       // 隔离字节
-        *pd++ = static_cast<char>(label.id >> 8 & 0xff);    // id
-        *pd++ = static_cast<char>(label.id & 0xff);         // id
     }
     *pd++ = 0x80;
     memcpy(pd, ori_data, ori_size);
